@@ -49,7 +49,7 @@ app.MapPut("recipes/category/{id}", (Guid id, string category, string newCategor
     Data data = new();
     data.EditCategory(id,category,newCategory);
     data.SaveRecipes();
-    return Results.Ok(); 
+    return Results.Ok(data.getRecipe(id)); 
 });
 
 app.MapDelete("recipes/category/{id}", (Guid id, string category) =>
