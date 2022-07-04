@@ -33,7 +33,7 @@ app.MapDelete("/recipes/{id}", (Guid id, Recipe recipe) =>
     Data data = new();
     data.RemoveRecipe(id);
     data.SaveRecipes();
-    return Results.NotFound();
+    return Results.Ok();
 });
 
 app.MapPost("recipes/category/{id}", (Guid id, string category) =>
@@ -49,7 +49,7 @@ app.MapPut("recipes/category/{id}", (Guid id, string category, string newCategor
     Data data = new();
     data.EditCategory(id,category,newCategory);
     data.SaveRecipes();
-    return Results.NoContent(); 
+    return Results.Ok(); 
 });
 
 app.MapDelete("recipes/category/{id}", (Guid id, string category) =>
@@ -57,7 +57,7 @@ app.MapDelete("recipes/category/{id}", (Guid id, string category) =>
     Data data = new();
     data.RemoveCategory(id,category);
     data.SaveRecipes();
-    return Results.NotFound();
+    return Results.Ok();
 });
 
 app.Run();
