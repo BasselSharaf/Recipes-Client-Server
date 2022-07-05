@@ -9,15 +9,18 @@ class Program
 {
     private static readonly HttpClient s_httpClient = new HttpClient();
     private static  List<Recipe> s_recipes = new();
-    static async Task Main()
+    static async Task Main(string [] args)
     {
-        s_httpClient.BaseAddress = new Uri("https://localhost:7182/");
+        var builder = WebApplication.CreateBuilder(args);
+        ConfigurationManager config = builder.Configuration;
+        Console.WriteLine(config["url"]);
+        s_httpClient.BaseAddress = new Uri(config["url"]);
         s_httpClient.DefaultRequestHeaders
               .Accept
               .Add(new MediaTypeWithQualityHeaderValue("application/json"));//ACCEPT header
         while (true)
         {
-            s_recipes = await FetchRecipes();
+            s_recipes = await FetchRecipesAsync();
             RecipeTableView();
             // User chooses the Action he would like to perform
             var choice = AnsiConsole.Prompt(
@@ -63,13 +66,13 @@ class Program
             switch (choice)
             {
                 case "Add Recipe":
-                    await AddRecipe();
+                    await AddRecipeAsync();
                     break;
                 case "Edit Recipe":
-                    await EditRecipe();
+                    await EditRecipeAsync();
                     break;
                 case "Delete Recipe":
-                    await DeleteRecipe();
+                    await DeleteRecipeAsync();
                     break;
                 default: break;
             }
@@ -79,14 +82,14 @@ class Program
         }
     }
 
-    private static async Task<List<Recipe>> FetchRecipes()
+    private static async Task<List<Recipe>> FetchRecipesAsync()
     {
         var recipes = await s_httpClient.GetFromJsonAsync<List<Recipe>>("recipes");
         ArgumentNullException.ThrowIfNull(recipes,"Fetching recipes failed");
         return recipes;
     }
 
-    private static async Task AddRecipe()
+    private static async Task AddRecipeAsync()
     {
         var title = takeInput("title");
         string ingredients = MultiLineInput("ingredients");
@@ -102,7 +105,7 @@ class Program
         httpResponseMessage.EnsureSuccessStatusCode();
     }
 
-    static async Task EditRecipe()
+    static async Task EditRecipeAsync()
     {
         var recipeId = RecipeSelection("Choose which recipe you would like to edit?");
         var toEdit = AnsiConsole.Prompt(
@@ -137,13 +140,13 @@ class Program
         }
         else
         {
-            await CategoryChoiceMaker(recipeId);
+            await CategoryChoiceMakerAsync(recipeId);
         }
 
 
     }
 
-    static async Task CategoryChoiceMaker(Guid recipeId)
+    static async Task CategoryChoiceMakerAsync(Guid recipeId)
     {
         var choice = AnsiConsole.Prompt(
            new SelectionPrompt<string>()
@@ -163,7 +166,7 @@ class Program
                 var categoryJson = new StringContent(
                     JsonSerializer.Serialize(newCategory),
                     Encoding.UTF8,
-                    "application/Json");
+                    "application/json");
                 httpResponseMessage =
                             await s_httpClient.PostAsync($"recipes/category?id={recipeId}&category={newCategory}",null);
                 httpResponseMessage.EnsureSuccessStatusCode();
@@ -195,7 +198,7 @@ class Program
         }
     }
 
-    static async Task DeleteRecipe()
+    static async Task DeleteRecipeAsync()
     {
         var recipeId = RecipeSelection("Choose which recipe you would like to delete?");
         using var httpResponseMessage =
@@ -266,7 +269,7 @@ class Program
             );
     }
 
-    static string stringLimiter(string input)
+    static string StringLimiter(string input)
     {
         if (input.Length > 30)
             return input.Substring(0, 30) + "...";
@@ -297,8 +300,8 @@ class Program
         table.AddColumn(new TableColumn("[dodgerblue2]Categories[/]").LeftAligned());
         // Add the Recipes to the table
         s_recipes.ForEach(r => table.AddRow("[bold][red]" + r.Title + "[/][/]",
-                                                stringLimiter(r.Ingredients),
-                                                stringLimiter(r.Instructions),
+                                                StringLimiter(r.Ingredients),
+                                                StringLimiter(r.Instructions),
                                                 ListLimitedView(r.Categories)));
         AnsiConsole.Write(table);
     }
