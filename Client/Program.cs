@@ -4,16 +4,20 @@ using Spectre.Console;
 using System.Text.Json.Serialization;
 using System.Globalization;
 using System.Text.Json;
+using System.Text;
 class Program
 {
-    private static readonly HttpClient client = new HttpClient();
-    private static readonly Data data = new Data();
-    private static  List<Recipe> Recipes = new();
-    static async Task Main(string[] args)
+    private static readonly HttpClient s_httpClient = new HttpClient();
+    private static  List<Recipe> s_recipes = new();
+    static async Task Main()
     {
+        s_httpClient.BaseAddress = new Uri("https://localhost:7182/");
+        s_httpClient.DefaultRequestHeaders
+              .Accept
+              .Add(new MediaTypeWithQualityHeaderValue("application/json"));//ACCEPT header
         while (true)
         {
-            Recipes = await FetchRecipes();
+            s_recipes = await FetchRecipes();
             RecipeTableView();
             // User chooses the Action he would like to perform
             var choice = AnsiConsole.Prompt(
@@ -41,7 +45,7 @@ class Program
                 table.AddColumn(new TableColumn("[dodgerblue2]Instructions[/]").LeftAligned());
                 table.AddColumn(new TableColumn("[dodgerblue2]Categories[/]").LeftAligned());
                 // Add the details of the recipe to the table
-                Recipe selectedRecipe = data.Recipes.FirstOrDefault(r => r.Id == recipeId);
+                Recipe selectedRecipe = s_recipes.FirstOrDefault(r => r.Id == recipeId);
                 table.AddRow(selectedRecipe.Title,
                              String.Join("\n", selectedRecipe.Ingredients.Split(",").Select(x => $"{x}")),
                              String.Join("\n", selectedRecipe.Instructions.Split(",").Select((x, n) => $"- {x}")),
@@ -59,17 +63,16 @@ class Program
             switch (choice)
             {
                 case "Add Recipe":
-                    AddRecipe();
+                    await AddRecipe();
                     break;
                 case "Edit Recipe":
-                    EditRecipe();
+                    await EditRecipe();
                     break;
                 case "Delete Recipe":
-                    DeleteRecipe();
+                    await DeleteRecipe();
                     break;
                 default: break;
             }
-            data.SaveRecipes();
             AnsiConsole.Clear();
             if (choice == "Exit")
                 break;
@@ -78,14 +81,8 @@ class Program
 
     private static async Task<List<Recipe>> FetchRecipes()
     {
-        var httpRequestMessage = new HttpRequestMessage(
-            HttpMethod.Get,
-            "https://localhost:7182/getRecipes");
-        var httpResponseMessage = await client.SendAsync(httpRequestMessage);
-        using var contentStream =
-            await httpResponseMessage.Content.ReadAsStreamAsync();
-        var recipes = await JsonSerializer.DeserializeAsync
-            <List<Recipe>>(contentStream);
+        var recipes = await s_httpClient.GetFromJsonAsync<List<Recipe>>("recipes");
+        ArgumentNullException.ThrowIfNull(recipes,"Fetching recipes failed");
         return recipes;
     }
 
@@ -95,10 +92,17 @@ class Program
         string ingredients = MultiLineInput("ingredients");
         string instructions = MultiLineInput("instructions");
         List<string> categories = ListInput("categories");
-        data.AddRecipe(new Recipe(title, ingredients, instructions, categories));
+        var recipe = new Recipe(title, ingredients, instructions, categories);
+        var recipeJson = new StringContent(
+        JsonSerializer.Serialize(recipe),
+        Encoding.UTF8,
+        "application/json");
+        using var httpResponseMessage =
+                    await s_httpClient.PostAsync("recipes", recipeJson);
+        httpResponseMessage.EnsureSuccessStatusCode();
     }
 
-    static void EditRecipe()
+    static async Task EditRecipe()
     {
         var recipeId = RecipeSelection("Choose which recipe you would like to edit?");
         var toEdit = AnsiConsole.Prompt(
@@ -110,28 +114,36 @@ class Program
                 "Title","Ingredients","Instructions","Categories"
 
                 }));
+        Recipe updatedRecipe = s_recipes.Where(r => r.Id == recipeId).FirstOrDefault();
+        ArgumentNullException.ThrowIfNull(updatedRecipe, "Couldn`t find the recipe to update");
         if (toEdit != "Categories")
         {
             switch (toEdit)
             {
                 case "Title":
-                    data.EditTitle(recipeId, takeInput("title"));
+                    updatedRecipe.Title = takeInput("title");
                     break;
                 case "Ingredients":
-                    data.EditIngredients(recipeId, MultiLineInput(toEdit));
+                    updatedRecipe.Ingredients = MultiLineInput(toEdit);
                     break;
                 case "Instructions":
-                    data.EditInstructions(recipeId, MultiLineInput(toEdit));
+                    updatedRecipe.Instructions = MultiLineInput(toEdit);
                     break;
             }
+            using var httpResponseMessage =
+                        await s_httpClient.PutAsJsonAsync($"recipes/{recipeId}", updatedRecipe);
+            httpResponseMessage.EnsureSuccessStatusCode();
+
         }
         else
         {
-            CategoryChoiceMaker(recipeId);
+            await CategoryChoiceMaker(recipeId);
         }
+
+
     }
 
-    static void CategoryChoiceMaker(Guid recipeId)
+    static async Task CategoryChoiceMaker(Guid recipeId)
     {
         var choice = AnsiConsole.Prompt(
            new SelectionPrompt<string>()
@@ -142,11 +154,19 @@ class Program
                 "Add Category","Edit Category","Delete Category"
 
                }));
-        string category;
+        string category,newCategory;
+        HttpResponseMessage httpResponseMessage;
         switch (choice)
         {
             case "Add Category":
-                data.AddCategory(recipeId, AnsiConsole.Ask<string>("What is the name of your new [dodgerblue2]category[/]?"));
+                newCategory = AnsiConsole.Ask<string>("What is the name of your new [dodgerblue2]category[/]?");
+                var categoryJson = new StringContent(
+                    JsonSerializer.Serialize(newCategory),
+                    Encoding.UTF8,
+                    "application/Json");
+                httpResponseMessage =
+                            await s_httpClient.PostAsync($"recipes/category?id={recipeId}&category={newCategory}",null);
+                httpResponseMessage.EnsureSuccessStatusCode();
                 break;
             case "Edit Category":
                 category = AnsiConsole.Prompt(
@@ -154,8 +174,11 @@ class Program
                        .Title("Which Category would you like to edit?")
                        .PageSize(10)
                        .MoreChoicesText("[grey](Move up and down to reveal more choices)[/]")
-                       .AddChoices(data.Recipes.Where(r => r.Id == recipeId).ToList()[0].Categories.ToArray()));
-                data.EditCategory(recipeId, category, AnsiConsole.Ask<string>("What is the new name of the [dodgerblue2]category[/]?"));
+                       .AddChoices(s_recipes.Where(r => r.Id == recipeId).ToList()[0].Categories.ToArray()));
+                newCategory = AnsiConsole.Ask<string>("What is the new name of the [dodgerblue2]category[/]?");
+                httpResponseMessage =
+                            await s_httpClient.PutAsync($"recipes/category?id={recipeId}&category={category}&newCategory={newCategory}", null);
+                httpResponseMessage.EnsureSuccessStatusCode();
                 break;
             case "Delete Category":
                 category = AnsiConsole.Prompt(
@@ -163,17 +186,21 @@ class Program
                        .Title("Which Category would you like to remove?")
                        .PageSize(10)
                        .MoreChoicesText("[grey](Move up and down to reveal more choices)[/]")
-                       .AddChoices(data.Recipes.Where(r => r.Id == recipeId).ToList()[0].Categories.ToArray()));
-                data.RemoveCategory(recipeId, category);
+                       .AddChoices(s_recipes.Where(r => r.Id == recipeId).ToList()[0].Categories.ToArray()));
+                httpResponseMessage =
+                            await s_httpClient.DeleteAsync($"recipes/category?id={recipeId}&category={category}");
+                httpResponseMessage.EnsureSuccessStatusCode();
                 break;
             default: break;
         }
     }
 
-    static void DeleteRecipe()
+    static async Task DeleteRecipe()
     {
         var recipeId = RecipeSelection("Choose which recipe you would like to delete?");
-        data.RemoveRecipe(recipeId);
+        using var httpResponseMessage =
+                    await s_httpClient.DeleteAsync($"recipes/{recipeId}");
+        httpResponseMessage.EnsureSuccessStatusCode();
     }
 
     static Guid RecipeSelection(string text)
@@ -183,8 +210,8 @@ class Program
                                 .Title(text)
                                 .PageSize(10)
                                 .MoreChoicesText("[grey](Move up and down to reveal more choices)[/]")
-                                .AddChoices(data.Recipes.Select((r, n) => $"{n}- {r.Title}")))[0] - '0';
-        return data.Recipes[recipeIndex].Id;
+                                .AddChoices(s_recipes.Select((r, n) => $"{n}- {r.Title}")))[0] - '0';
+        return s_recipes[recipeIndex].Id;
     }
 
 
@@ -269,7 +296,7 @@ class Program
         table.AddColumn(new TableColumn("[dodgerblue2]Instructions[/]").LeftAligned());
         table.AddColumn(new TableColumn("[dodgerblue2]Categories[/]").LeftAligned());
         // Add the Recipes to the table
-        data.Recipes.ForEach(r => table.AddRow("[bold][red]" + r.Title + "[/][/]",
+        s_recipes.ForEach(r => table.AddRow("[bold][red]" + r.Title + "[/][/]",
                                                 stringLimiter(r.Ingredients),
                                                 stringLimiter(r.Instructions),
                                                 ListLimitedView(r.Categories)));
@@ -292,27 +319,4 @@ class Recipe
         Instructions = instructions;
         Categories = categories;
     }
-}
-public class Repository
-{
-    [JsonPropertyName("name")]
-    public string Name { get; set; }
-
-    [JsonPropertyName("description")]
-    public string Description { get; set; }
-
-    [JsonPropertyName("html_url")]
-    public Uri GitHubHomeUrl { get; set; }
-
-    [JsonPropertyName("homepage")]
-    public Uri Homepage { get; set; }
-
-    [JsonPropertyName("watchers")]
-    public int Watchers { get; set; }
-
-    [JsonPropertyName("pushed_at")]
-    public string JsonDate { get; set; }
-
-    public DateTime LastPush =>
-        DateTime.ParseExact(JsonDate, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
 }
