@@ -23,12 +23,15 @@ app.MapPost("/recipes", (Recipe recipe) =>
     return Results.Created($"/recipes/{recipe.Id}",recipe);
 });
 
-app.MapPut("/recipes/{id}", (Guid id) =>
+app.MapPut("/recipes/{id}", (Guid id, Recipe newRecipe) =>
 {
-    // TODO: Code update recipe
+    Data data = new();
+    var updatedRecipe = data.EditRecipe(id, newRecipe);
+    data.SaveRecipes();
+    return Results.Ok(updatedRecipe);
 });
 
-app.MapDelete("/recipes/{id}", (Guid id, Recipe recipe) =>
+app.MapDelete("/recipes/{id}", (Guid id) =>
 {
     Data data = new();
     data.RemoveRecipe(id);

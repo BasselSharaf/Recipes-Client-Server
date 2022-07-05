@@ -50,6 +50,16 @@ class Data
         _recipes.Remove(recipe);
     }
 
+    public Recipe EditRecipe(Guid id, Recipe newRecipe)
+    {
+        var recipe = getRecipe(id);
+        recipe.Title = newRecipe.Title;
+        recipe.Ingredients = newRecipe.Ingredients;
+        recipe.Instructions = newRecipe.Instructions;
+        recipe.Categories = newRecipe.Categories;
+        return recipe;
+    }
+
     public void EditTitle(Guid id, string newTitle)
     {
         var recipe = getRecipe(id);
