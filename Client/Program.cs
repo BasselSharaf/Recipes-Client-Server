@@ -13,7 +13,6 @@ class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         ConfigurationManager config = builder.Configuration;
-        Console.WriteLine(config["url"]);
         s_httpClient.BaseAddress = new Uri(config["url"]);
         s_httpClient.DefaultRequestHeaders
               .Accept
