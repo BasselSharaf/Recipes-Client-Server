@@ -80,7 +80,8 @@ class Program
     private static async Task<List<Recipe>> FetchRecipesAsync()
     {
         var recipes = await s_httpClient.GetFromJsonAsync<List<Recipe>>("recipes");
-        ArgumentNullException.ThrowIfNull(recipes, "Fetching recipes failed");
+        if(recipes == null)
+            recipes=new List<Recipe>();
         return recipes;
     }
 
@@ -111,8 +112,7 @@ class Program
                 .AddChoices(new[] {
                 "Title","Ingredients","Instructions","Categories"
                 }));
-        Recipe updatedRecipe = s_recipes.Where(r => r.Id == recipeId).FirstOrDefault();
-        ArgumentNullException.ThrowIfNull(updatedRecipe, "Couldn`t find the recipe to update");
+        Recipe updatedRecipe = s_recipes.Where(r => r.Id == recipeId).First();
         if (toEdit != "Categories")
         {
             switch (toEdit)
