@@ -111,7 +111,6 @@ class Program
                 .MoreChoicesText("[grey](Move up and down to reveal more choices)[/]")
                 .AddChoices(new[] {
                 "Title","Ingredients","Instructions","Categories"
-
                 }));
         Recipe updatedRecipe = s_recipes.Where(r => r.Id == recipeId).FirstOrDefault();
         ArgumentNullException.ThrowIfNull(updatedRecipe, "Couldn`t find the recipe to update");
@@ -132,7 +131,6 @@ class Program
             using var httpResponseMessage =
                         await s_httpClient.PutAsJsonAsync($"recipes/{recipeId}", updatedRecipe);
             httpResponseMessage.EnsureSuccessStatusCode();
-
         }
         else
         {
@@ -149,7 +147,6 @@ class Program
                .MoreChoicesText("[grey](Move up and down to reveal more choices)[/]")
                .AddChoices(new[] {
                 "Add Category","Edit Category","Delete Category"
-
                }));
         string category, newCategory;
         HttpResponseMessage httpResponseMessage;
@@ -211,7 +208,6 @@ class Program
         return s_recipes[recipeIndex].Id;
     }
 
-
     static string MultiLineInput(string text)
     {
         AnsiConsole.Markup($"Please insert the [dodgerblue2]{text}[/] of your recipe \n");
@@ -267,7 +263,6 @@ class Program
     {
         if (input.Length > 30)
             return input.Substring(0, 30) + "...";
-
         return input;
     }
 
