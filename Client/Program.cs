@@ -29,14 +29,13 @@ class Program
                     }));
             if (choice == "View Recipe")
             {
-                // View recipes
                 var recipeId = RecipeSelection("Choose which recipe you would like to view: ");
                 AnsiConsole.Clear();
                 AnsiConsole.Write(
                    new FigletText("Recipes")
                .LeftAligned()
                .Color(Color.Red));
-                // detailed view of recipe
+                // Detailed view of recipe
                 var table = new Table().Border(TableBorder.Ascii2);
                 table.Expand();
                 table.AddColumn("[dodgerblue2]Title[/]");
