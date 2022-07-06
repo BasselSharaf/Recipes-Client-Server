@@ -1,15 +1,12 @@
-using System.Net.Http;
-using System.Net.Http.Headers;
 using Spectre.Console;
-using System.Text.Json.Serialization;
-using System.Globalization;
-using System.Text.Json;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 class Program
 {
-    private static readonly HttpClient s_httpClient = new HttpClient();
-    private static  List<Recipe> s_recipes = new();
-    static async Task Main(string [] args)
+    private static readonly HttpClient s_httpClient = new();
+    private static List<Recipe> s_recipes = new();
+    static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
         ConfigurationManager config = builder.Configuration;
@@ -84,13 +81,13 @@ class Program
     private static async Task<List<Recipe>> FetchRecipesAsync()
     {
         var recipes = await s_httpClient.GetFromJsonAsync<List<Recipe>>("recipes");
-        ArgumentNullException.ThrowIfNull(recipes,"Fetching recipes failed");
+        ArgumentNullException.ThrowIfNull(recipes, "Fetching recipes failed");
         return recipes;
     }
 
     private static async Task AddRecipeAsync()
     {
-        var title = takeInput("title");
+        var title = TakeInput("title");
         string ingredients = MultiLineInput("ingredients");
         string instructions = MultiLineInput("instructions");
         List<string> categories = ListInput("categories");
@@ -123,7 +120,7 @@ class Program
             switch (toEdit)
             {
                 case "Title":
-                    updatedRecipe.Title = takeInput("title");
+                    updatedRecipe.Title = TakeInput("title");
                     break;
                 case "Ingredients":
                     updatedRecipe.Ingredients = MultiLineInput(toEdit);
@@ -141,8 +138,6 @@ class Program
         {
             await CategoryChoiceMakerAsync(recipeId);
         }
-
-
     }
 
     static async Task CategoryChoiceMakerAsync(Guid recipeId)
@@ -156,7 +151,7 @@ class Program
                 "Add Category","Edit Category","Delete Category"
 
                }));
-        string category,newCategory;
+        string category, newCategory;
         HttpResponseMessage httpResponseMessage;
         switch (choice)
         {
@@ -167,7 +162,7 @@ class Program
                     Encoding.UTF8,
                     "application/json");
                 httpResponseMessage =
-                            await s_httpClient.PostAsync($"recipes/category?id={recipeId}&category={newCategory}",null);
+                            await s_httpClient.PostAsync($"recipes/category?id={recipeId}&category={newCategory}", null);
                 httpResponseMessage.EnsureSuccessStatusCode();
                 break;
             case "Edit Category":
@@ -256,7 +251,7 @@ class Program
         return inputList;
     }
 
-    static string takeInput(string text)
+    static string TakeInput(string text)
     {
         return AnsiConsole.Prompt(
             new TextPrompt<string>($"What is the [dodgerblue2]{text}[/] of your recipe?")
