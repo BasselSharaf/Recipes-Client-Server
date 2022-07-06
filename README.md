@@ -1,5 +1,6 @@
 # Recipes-Client-Server
-A small application to manage recipes
+A small web application to manage recipes
+![image](https://user-images.githubusercontent.com/15571269/177621344-cc9a5203-d4dc-41ef-a48a-788d5216e06b.png)
 
 ## Functionality
 User can add a recipe entry has the following details:
