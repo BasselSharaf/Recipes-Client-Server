@@ -1,5 +1,5 @@
 # Recipes-Client-Server
-# Application to manage a recipe
+A small application to manage recipes
 
 ## Functionality
 User can add a recipe entry has the following details:
