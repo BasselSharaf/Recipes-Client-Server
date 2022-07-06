@@ -1,6 +1,6 @@
 # Recipes-Client-Server
-A small web application to manage recipes
-![image](https://user-images.githubusercontent.com/15571269/177621344-cc9a5203-d4dc-41ef-a48a-788d5216e06b.png)
+- This is small web application to manage recipes, I did it to learn more about C# and ASP.NET Core
+![image](https://user-images.githubusercontent.com/15571269/177621707-57edc897-6249-4c12-abfc-b47141094876.png)
 
 ## Functionality
 User can add a recipe entry has the following details:
